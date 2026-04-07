@@ -2,6 +2,7 @@
 <html data-theme="light">
   <head>
     <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta http-equiv="refresh" content="2;url=https://github.com/jsw0528/MrZhang.me/issues/3">
     <title>{{ site.name }}</title>
     <style>
@@ -55,11 +56,16 @@
       z-index: 9999;
       transition: background 0.3s ease, box-shadow 0.3s ease, transform 0.2s ease;
       user-select: none;
+      -webkit-user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
     }
 
-    #theme-toggle:hover {
-      background: var(--btn-hover-bg);
-      transform: scale(1.12);
+    @media (hover: hover) {
+      #theme-toggle:hover {
+        background: var(--btn-hover-bg);
+        transform: scale(1.12);
+      }
     }
 
     #theme-toggle.casting {
@@ -115,10 +121,12 @@
       var html  = document.documentElement;
       var btn   = document.getElementById('theme-toggle');
 
-      /* ── Restore saved preference ── */
-      var saved = localStorage.getItem('mrzhang-theme') || 'light';
-      html.setAttribute('data-theme', saved);
-      btn.textContent = saved === 'dark' ? '☀️' : '🌙';
+      /* ── Restore saved preference (fall back to system setting) ── */
+      var saved      = localStorage.getItem('mrzhang-theme');
+      var sysDark    = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      var theme      = saved || (sysDark ? 'dark' : 'light');
+      html.setAttribute('data-theme', theme);
+      btn.textContent = theme === 'dark' ? '☀️' : '🌙';
 
       /* ── Sparkle burst ── */
       var SPARKLES = ['✨', '⭐', '💫', '🌟', '✦', '✶', '·', '★'];
