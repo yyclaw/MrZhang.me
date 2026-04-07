@@ -1,19 +1,228 @@
 <!DOCTYPE html>
-<html>
+<html data-theme="light">
   <head>
     <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta http-equiv="refresh" content="2;url=https://github.com/jsw0528/MrZhang.me/issues/3">
     <title>{{ site.name }}</title>
     <style>
+    :root {
+      --bg: #ffffff;
+      --color: #333333;
+      --btn-bg: rgba(0, 0, 0, 0.06);
+      --btn-hover-bg: rgba(0, 0, 0, 0.12);
+      --btn-shadow: rgba(0, 0, 0, 0.15);
+    }
+
+    [data-theme="dark"] {
+      --bg: #0d0d1a;
+      --color: #d4d4e8;
+      --btn-bg: rgba(255, 255, 255, 0.08);
+      --btn-hover-bg: rgba(255, 255, 255, 0.16);
+      --btn-shadow: rgba(120, 100, 255, 0.4);
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
     body {
-      color: #333;
+      margin: 0;
+      padding: 0;
+      color: var(--color);
+      background: var(--bg);
       font: 20px/1.5 "Helvetica Neue", Helvetica, Arial, sans-serif;
       text-align: center;
+      transition: background 0.4s ease, color 0.4s ease;
+    }
+
+    /* ── Toggle button ── */
+    #theme-toggle {
+      position: fixed;
+      top: 18px;
+      right: 18px;
+      width: 46px;
+      height: 46px;
+      border: none;
+      border-radius: 50%;
+      background: var(--btn-bg);
+      box-shadow: 0 2px 12px var(--btn-shadow);
+      cursor: pointer;
+      font-size: 22px;
+      line-height: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      transition: background 0.3s ease, box-shadow 0.3s ease, transform 0.2s ease;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+
+    @media (hover: hover) {
+      #theme-toggle:hover {
+        background: var(--btn-hover-bg);
+        transform: scale(1.12);
+      }
+    }
+
+    #theme-toggle.casting {
+      animation: wand-spin 0.55s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+
+    @keyframes wand-spin {
+      0%   { transform: scale(1)    rotate(0deg); }
+      40%  { transform: scale(1.35) rotate(200deg); }
+      70%  { transform: scale(0.9)  rotate(340deg); }
+      100% { transform: scale(1)    rotate(360deg); }
+    }
+
+    /* ── Sparkle particles ── */
+    .sparkle {
+      position: fixed;
+      pointer-events: none;
+      z-index: 10001;
+      font-size: 18px;
+      will-change: transform, opacity;
+      animation: sparkle-fly var(--dur, 0.7s) ease-out forwards;
+    }
+
+    @keyframes sparkle-fly {
+      0% {
+        transform: translate(0, 0) scale(1) rotate(0deg);
+        opacity: 1;
+      }
+      100% {
+        transform: translate(var(--dx), var(--dy)) scale(0.2) rotate(var(--rot));
+        opacity: 0;
+      }
+    }
+
+    /* ── Magic reveal overlay ── */
+    #magic-overlay {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 10000;
+      will-change: clip-path;
     }
     </style>
   </head>
 
   <body>
+    <button id="theme-toggle" aria-label="切换深色模式">🌙</button>
+
     {{ content }}
+
+    <script>
+    (function () {
+      var html  = document.documentElement;
+      var btn   = document.getElementById('theme-toggle');
+
+      /* ── Restore saved preference (fall back to system setting) ── */
+      var saved      = localStorage.getItem('mrzhang-theme');
+      var sysDark    = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      var theme      = saved || (sysDark ? 'dark' : 'light');
+      html.setAttribute('data-theme', theme);
+      btn.textContent = theme === 'dark' ? '☀️' : '🌙';
+
+      /* ── Sparkle burst ── */
+      var SPARKLES = ['✨', '⭐', '💫', '🌟', '✦', '✶', '·', '★'];
+      function burst(cx, cy) {
+        var count = 10;
+        for (var i = 0; i < count; i++) {
+          (function (i) {
+            var el    = document.createElement('span');
+            el.className = 'sparkle';
+            el.textContent = SPARKLES[Math.floor(Math.random() * SPARKLES.length)];
+
+            /* random outward direction */
+            var angle = (i / count) * Math.PI * 2 + (Math.random() - 0.5) * 0.6;
+            var dist  = 55 + Math.random() * 55;
+            var dur   = 0.55 + Math.random() * 0.3;
+
+            el.style.left = cx + 'px';
+            el.style.top  = cy + 'px';
+            el.style.setProperty('--dx',  Math.cos(angle) * dist + 'px');
+            el.style.setProperty('--dy',  Math.sin(angle) * dist + 'px');
+            el.style.setProperty('--dur', dur + 's');
+            el.style.setProperty('--rot', (Math.random() * 360 - 180) + 'deg');
+
+            /* slight stagger */
+            el.style.animationDelay = (i * 25) + 'ms';
+
+            document.body.appendChild(el);
+            el.addEventListener('animationend', function () { el.remove(); });
+          })(i);
+        }
+      }
+
+      /* ── Clip-path circle reveal ── */
+      var overlay = document.getElementById('magic-overlay');
+
+      function reveal(cx, cy, newBg, onMidpoint, onDone) {
+        overlay.style.background   = newBg;
+        overlay.style.clipPath     = 'circle(0% at ' + cx + 'px ' + cy + 'px)';
+        overlay.style.transition   = 'none';
+
+        /* double-rAF to let the browser paint the initial state */
+        requestAnimationFrame(function () {
+          requestAnimationFrame(function () {
+            overlay.style.transition = 'clip-path 0.55s cubic-bezier(0.4, 0, 0.2, 1)';
+            overlay.style.clipPath   = 'circle(160% at ' + cx + 'px ' + cy + 'px)';
+
+            setTimeout(onMidpoint, 260);
+
+            setTimeout(function () {
+              overlay.style.transition = 'none';
+              overlay.style.clipPath   = 'circle(0% at ' + cx + 'px ' + cy + 'px)';
+              onDone();
+            }, 580);
+          });
+        });
+      }
+
+      /* ── Toggle handler ── */
+      var busy = false;
+      btn.addEventListener('click', function () {
+        if (busy) return;
+        busy = true;
+
+        var rect   = btn.getBoundingClientRect();
+        var cx     = rect.left + rect.width  / 2;
+        var cy     = rect.top  + rect.height / 2;
+        var isDark = html.getAttribute('data-theme') !== 'dark';
+        var next   = isDark ? 'dark' : 'light';
+        var newBg  = isDark ? '#0d0d1a' : '#ffffff';
+
+        /* spin the wand */
+        btn.classList.add('casting');
+        btn.addEventListener('animationend', function h() {
+          btn.classList.remove('casting');
+          btn.removeEventListener('animationend', h);
+        });
+
+        /* sparkles */
+        burst(cx, cy);
+
+        /* colour wave */
+        reveal(cx, cy, newBg,
+          function () {
+            /* switch theme at the peak of the wave */
+            html.setAttribute('data-theme', next);
+            btn.textContent = isDark ? '☀️' : '🌙';
+            localStorage.setItem('mrzhang-theme', next);
+          },
+          function () {
+            busy = false;
+          }
+        );
+      });
+    })();
+    </script>
+
+    <div id="magic-overlay"></div>
   </body>
 </html>
